@@ -1,6 +1,7 @@
 from groq import Groq
 from sqlalchemy.orm import Session
 from models.database import Review, Repository, DiaryEntry
+from core.database import SessionLocal
 import httpx
 import os
 import base64
@@ -67,6 +68,10 @@ async def post_github_comment(
 def calculate_health_score(review_text: str) -> float:
     score = 100.0
     issue_count = review_text.count("Issue:")
+    issue_count += review_text.count("Problem:")
+    issue_count += review_text.count("Critical:")
+    issue_count += review_text.count("Security:")
+    issue_count += review_text.count("Warning:")
     score -= issue_count * 10
     return max(score, 0.0)
 
@@ -78,6 +83,8 @@ async def review_code(
     github_token: str,
     db: Session
 ):
+    # Create a fresh database session
+    db = SessionLocal()
     try:
         relevant_extensions = [
             ".js", ".jsx", ".ts", ".tsx",
@@ -119,7 +126,10 @@ async def review_code(
 
         ai_review = response.choices[0].message.content
         health_score = calculate_health_score(ai_review)
+        print(f"AI REVIEW SNIPPET: {ai_review[:200]}")
+        print(f"HEALTH SCORE: {health_score}")
 
+        #save review and health score to the database
         review = Review(
             repo_id=repo_id,
             commit_sha=commit_sha,
@@ -129,14 +139,12 @@ async def review_code(
         )
         db.add(review)
 
+        #update the repository's health score
         repo = db.query(Repository).filter(
             Repository.id == repo_id
         ).first()
         if repo:
             repo.health_score = health_score
-            db.add(repo)
-            db.commit()
-            db.refresh(repo)
 
         diary = DiaryEntry(
             repo_id=repo_id,
@@ -148,6 +156,9 @@ async def review_code(
         db.add(diary)
         db.commit()
 
+        print(f"Database updated successfully")
+
+        #post the AI review as a comment on the GitHub commit
         await post_github_comment(
             repo_full_name,
             commit_sha,
@@ -157,3 +168,6 @@ async def review_code(
 
     except Exception as e:
         print(f"AI review error: {e}")
+        db.rollback()
+    finally:
+        db.close()

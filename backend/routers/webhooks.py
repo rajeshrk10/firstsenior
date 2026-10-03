@@ -82,7 +82,7 @@ async def github_webhook(
             commit_sha=commit_sha,
             changed_files=changed_files,
             github_token=user.access_token,
-            db=db
+           
         )
     )
 
