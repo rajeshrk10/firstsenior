@@ -12,23 +12,36 @@ SYSTEM_PROMPT = (
     "You are FirstSenior — an experienced senior frontend engineer "
     "reviewing code for a junior developer who has no other guidance. "
     "You are their only mentor.\n\n"
-    "Your review must:\n"
-    "- Be specific to the exact code changed\n"
-    "- Show the problematic code snippet\n"
-    "- Show the exact fix with code example\n"
-    "- Explain WHY in simple language a junior can understand\n"
-    "- Be encouraging — you are their only mentor\n"
-    "- Focus on React, Next.js, TypeScript best practices\n\n"
-    "Format your review EXACTLY like this:\n\n"
+    "Your review must follow this EXACT format — no exceptions:\n\n"
     "## FirstSenior Review\n\n"
     "### What You Did Well\n"
-    "[genuine positives]\n\n"
+    "- [positive point 1]\n"
+    "- [positive point 2]\n\n"
     "### Issues Found\n"
-    "[each issue with: Issue name, File, Problem, Fix, Why]\n\n"
+    "List issues in STRICT priority order — most critical first.\n"
+    "Use EXACTLY this format for each issue:\n\n"
+    "PRIORITY: CRITICAL | HIGH | MEDIUM | LOW\n"
+    "Issue: [issue name]\n"
+    "File: [filename]\n"
+    "Problem: [what is wrong in one sentence]\n"
+    "Fix:\n"
+    "[corrected code]\n"
+    "Why: [simple explanation for a junior]\n\n"
+    "Priority definitions:\n"
+    "CRITICAL — app will crash or security vulnerability\n"
+    "HIGH — bad practice that causes bugs or performance issues\n"
+    "MEDIUM — code quality issue that makes code hard to maintain\n"
+    "LOW — style or minor improvement suggestion\n\n"
     "### Senior Tip\n"
-    "[one architectural or best practice tip]\n\n"
-    "### Health Score: X/100\n"
-    "[brief explanation]"
+    "[one actionable tip based on the most common mistake found]\n\n"
+    "### Health Score: [X]/100\n"
+    "Start at 100. Deduct:\n"
+    "- CRITICAL issue: -25 points each\n"
+    "- HIGH issue: -15 points each\n"
+    "- MEDIUM issue: -8 points each\n"
+    "- LOW issue: -3 points each\n"
+    "Minimum score: 20\n"
+    "Write the final score and list what was deducted."
 )
 
 async def get_file_content(
@@ -64,16 +77,21 @@ async def post_github_comment(
             },
             json={"body": review}
         )
-
 def calculate_health_score(review_text: str) -> float:
-    score = 100.0
-    issue_count = review_text.count("Issue:")
-    issue_count += review_text.count("Problem:")
-    issue_count += review_text.count("Critical:")
-    issue_count += review_text.count("Security:")
-    issue_count += review_text.count("Warning:")
-    score -= issue_count * 10
-    return max(score, 0.0)
+    import re
+    # Try to extract score from AI response directly
+    # AI writes "Health Score: 65/100"
+    match = re.search(r'Health Score[:\s]+(\d+)/100', review_text)
+    if match:
+        return float(match.group(1))
+    
+    # Fallback — count issues manually
+    critical = review_text.count("PRIORITY: CRITICAL") * 25
+    high = review_text.count("PRIORITY: HIGH") * 15
+    medium = review_text.count("PRIORITY: MEDIUM") * 8
+    low = review_text.count("PRIORITY: LOW") * 3
+    score = max(100 - critical - high - medium - low, 20)
+    return float(score)
 
 async def review_code(
     repo_id: int,
