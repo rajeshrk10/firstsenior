@@ -81,7 +81,6 @@ async def review_code(
     commit_sha: str,
     changed_files: list,
     github_token: str,
-    db: Session
 ):
     # Create a fresh database session
     db = SessionLocal()
