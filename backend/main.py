@@ -25,3 +25,4 @@ app.include_router(webhooks.router)
 @app.get("/")
 def root():
     return {"message": "FirstSenior API is running"}
+
