@@ -37,6 +37,16 @@ interface DiaryEntry {
 }
 
 export default function DashboardPage() {
+
+  // bad code for testing
+const [data, setData] = useState([])
+useEffect(() => {
+  fetch('http://localhost:8000/repos/connected')
+    .then(res => res.json())
+    .then(data => setData(data))
+})
+console.log('render')
+
   const { data: session, status } = useSession()
   const router = useRouter()
 
