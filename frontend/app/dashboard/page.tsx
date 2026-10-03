@@ -309,13 +309,29 @@ export default function DashboardPage() {
                             <p className="text-slate-400 text-sm mb-3">
                               Files: {review.files_changed}
                             </p>
-                            {selectedReview?.id === review.id && (
-                              <div className="mt-4 pt-4 border-t border-slate-800">
-                                <pre className="text-slate-300 text-sm whitespace-pre-wrap font-sans">
-                                  {review.ai_review}
-                                </pre>
-                              </div>
-                            )}
+                          {selectedReview?.id === review.id && (
+  <div className="mt-4 pt-4 border-t border-slate-800">
+    <div className="text-slate-300 text-sm whitespace-pre-wrap font-sans leading-7">
+      {review.ai_review.split('\n').map((line, i) => (
+        <div
+          key={i}
+          className={
+            line.startsWith('## ') ? 'text-white text-lg font-bold mt-4 mb-2' :
+            line.startsWith('### ') ? 'text-green-400 font-semibold mt-3 mb-1' :
+            line.startsWith('**Issue') ? 'text-yellow-400 font-semibold mt-2' :
+            line.startsWith('```') ? 'hidden' :
+            line.startsWith('- ') ? 'ml-4 text-slate-300' :
+            line.startsWith('Why:') ? 'text-slate-400 italic ml-4' :
+            line.startsWith('Fix:') ? 'text-green-300 ml-4' :
+            'text-slate-300'
+          }
+        >
+          {line.replace(/^##+ /, '').replace(/\*\*/g, '')}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
                           </Card>
                         ))}
                       </div>
