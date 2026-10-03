@@ -93,6 +93,7 @@ def calculate_health_score(review_text: str) -> float:
     score = max(100 - critical - high - medium - low, 20)
     return float(score)
 
+
 async def review_code(
     repo_id: int,
     repo_full_name: str,
