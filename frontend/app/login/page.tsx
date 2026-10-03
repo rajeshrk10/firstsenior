@@ -1,11 +1,21 @@
 "use client"
-
+import { useEffect, useState } from "react"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { GitBranch } from "lucide-react"
 
 
 export default function LoginPage() {
+
+  const [users, setUsers] = useState([])
+
+useEffect(() => {
+  fetch('http://localhost:8000/users')
+    .then(res => res.json())
+    .then(data => setUsers(data))
+})
+
+console.log('component rendered', users)
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950">
       <div className="bg-slate-900 p-8 rounded-xl border border-slate-800 w-full max-w-md">
