@@ -119,7 +119,7 @@ async def review_code(
                     "content": f"Please review these changed files:\n{file_contents}"
                 }
             ],
-            max_tokens=2000,
+            max_tokens=900,
             temperature=0.3
         )
 
