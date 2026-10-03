@@ -12,36 +12,27 @@ SYSTEM_PROMPT = (
     "You are FirstSenior — an experienced senior frontend engineer "
     "reviewing code for a junior developer who has no other guidance. "
     "You are their only mentor.\n\n"
-    "Your review must follow this EXACT format — no exceptions:\n\n"
+    "Review the code and respond in EXACTLY this format:\n\n"
     "## FirstSenior Review\n\n"
     "### What You Did Well\n"
-    "- [positive point 1]\n"
-    "- [positive point 2]\n\n"
+    "- [positive point]\n\n"
     "### Issues Found\n"
-    "List issues in STRICT priority order — most critical first.\n"
-    "Use EXACTLY this format for each issue:\n\n"
-    "PRIORITY: CRITICAL | HIGH | MEDIUM | LOW\n"
-    "Issue: [issue name]\n"
+    "For each issue write exactly:\n"
+    "**Issue: [name]**\n"
     "File: [filename]\n"
-    "Problem: [what is wrong in one sentence]\n"
-    "Fix:\n"
-    "[corrected code]\n"
-    "Why: [simple explanation for a junior]\n\n"
-    "Priority definitions:\n"
-    "CRITICAL — app will crash or security vulnerability\n"
-    "HIGH — bad practice that causes bugs or performance issues\n"
-    "MEDIUM — code quality issue that makes code hard to maintain\n"
-    "LOW — style or minor improvement suggestion\n\n"
+    "Problem: [what is wrong]\n"
+    "Fix: [corrected code]\n"
+    "Why: [simple explanation]\n\n"
     "### Senior Tip\n"
-    "[one actionable tip based on the most common mistake found]\n\n"
+    "[one tip]\n\n"
     "### Health Score: [X]/100\n"
-    "Start at 100. Deduct:\n"
-    "- CRITICAL issue: -25 points each\n"
-    "- HIGH issue: -15 points each\n"
-    "- MEDIUM issue: -8 points each\n"
-    "- LOW issue: -3 points each\n"
-    "Minimum score: 20\n"
-    "Write the final score and list what was deducted."
+    "Calculate X by starting at 100 and deducting points:\n"
+    "- App crash or security issue: deduct 25 each\n"
+    "- Bug or performance issue: deduct 15 each\n"
+    "- Code quality issue: deduct 8 each\n"
+    "- Minor style issue: deduct 3 each\n"
+    "Minimum is 20. You MUST write the score as: Health Score: [number]/100\n"
+    "Example: Health Score: 65/100"
 )
 
 async def get_file_content(
@@ -79,20 +70,20 @@ async def post_github_comment(
         )
 def calculate_health_score(review_text: str) -> float:
     import re
-    # Try to extract score from AI response directly
-    # AI writes "Health Score: 65/100"
+    
+    # Try to extract score written by AI like "Health Score: 65/100"
     match = re.search(r'Health Score[:\s]+(\d+)/100', review_text)
     if match:
         return float(match.group(1))
     
-    # Fallback — count issues manually
-    critical = review_text.count("PRIORITY: CRITICAL") * 25
-    high = review_text.count("PRIORITY: HIGH") * 15
-    medium = review_text.count("PRIORITY: MEDIUM") * 8
-    low = review_text.count("PRIORITY: LOW") * 3
-    score = max(100 - critical - high - medium - low, 20)
-    return float(score)
-
+    # AI is writing numbered issues like "1.", "2.", "3."
+    numbered_issues = len(re.findall(r'^\d+\.', review_text, re.MULTILINE))
+    
+    if numbered_issues > 0:
+        score = 100 - (numbered_issues * 15)
+        return max(float(score), 20.0)
+    
+    return 100.0
 
 async def review_code(
     repo_id: int,
