@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from core.database import engine
 from models.database import Base
-from routers import repos, webhooks
+from routers import repos, webhooks, reviews, diary
 
 load_dotenv()
 
@@ -21,8 +21,17 @@ app.add_middleware(
 
 app.include_router(repos.router)
 app.include_router(webhooks.router)
+app.include_router(reviews.router)
+app.include_router(diary.router)
 
 @app.get("/")
 def root():
     return {"message": "FirstSenior API is running"}
 
+@app.get("/test-groq")
+def test_groq():
+    from groq import Groq
+    import os
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    models = client.models.list()
+    return {"models": [m.id for m in models.data]}
