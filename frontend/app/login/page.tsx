@@ -18,7 +18,6 @@ export default function LoginPage() {
             The AI senior engineer you never had
           </p>
         </div>
-
         <div className="space-y-4 mb-8">
           <div className="flex items-center gap-3 text-slate-300">
             <span className="text-green-400">✓</span>
