@@ -125,7 +125,7 @@ async def review_code(
 
         ai_review = response.choices[0].message.content
         health_score = calculate_health_score(ai_review)
-        print(f"AI REVIEW SNIPPET: {ai_review[:200]}")
+        print(f"AI REVIEW SNIPPET: {ai_review[:200]}") 
         print(f"HEALTH SCORE: {health_score}")
 
         #save review and health score to the database
