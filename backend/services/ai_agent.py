@@ -134,6 +134,9 @@ async def review_code(
         ).first()
         if repo:
             repo.health_score = health_score
+            db.add(repo)
+            db.commit()
+            db.refresh(repo)
 
         diary = DiaryEntry(
             repo_id=repo_id,
