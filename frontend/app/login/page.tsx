@@ -1,15 +1,10 @@
 "use client"
-import { useEffect } from "react"
+
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { GitBranch } from "lucide-react"
 
-// Bad code for testing
-useEffect(() => {
-  fetch('https://api.example.com/data')
-    .then(res => res.json())
-    .then(data => console.log(data))
-})
+
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950">

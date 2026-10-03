@@ -64,6 +64,7 @@ export default function DashboardPage() {
     if (selectedRepo) {
       fetchReviews(selectedRepo.id)
       fetchDiary(selectedRepo.id)
+      fetchConnectedRepos()
     }
   }, [selectedRepo])
 
