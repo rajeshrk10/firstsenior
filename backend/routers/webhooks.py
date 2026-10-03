@@ -84,5 +84,4 @@ async def github_webhook(
             github_token=user.access_token,
         )
     )
-
     return {"message": "Webhook received. AI review started."}
