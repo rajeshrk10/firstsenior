@@ -40,7 +40,6 @@ interface DiaryEntry {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
   const [connectedRepos, setConnectedRepos] = useState<ConnectedRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
