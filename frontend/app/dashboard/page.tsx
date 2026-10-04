@@ -40,7 +40,7 @@ interface DiaryEntry {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
+
   const [connectedRepos, setConnectedRepos] = useState<ConnectedRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="border-b border-slate-800 px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">FirstSenior</h1>
+          <h1 className="text-xl font-bold text-white">FirstSenior </h1>
           <div className="flex items-center gap-4">
             <img
               src={session?.user?.image || ""}
