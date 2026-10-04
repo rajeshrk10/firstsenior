@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,13 +37,13 @@ interface DiaryEntry {
   created_at: string;
 }
 
-  interface GithubRepo {
-  id: number
-  name: string
-  full_name: string
-  private: boolean
-  description: string
-  language: string
+interface GithubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  description: string;
+  language: string;
 }
 
 export default function DashboardPage() {
@@ -65,21 +65,7 @@ export default function DashboardPage() {
     if (status === "unauthenticated") router.replace("/login");
   }, [status, router]);
 
-  useEffect(() => {
-    if (session?.accessToken && session?.githubId) {
-      fetchConnectedRepos();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (selectedRepo) {
-      fetchReviews(selectedRepo.id);
-      fetchDiary(selectedRepo.id);
-      fetchConnectedRepos();
-    }
-  }, [selectedRepo]);
-
-  const fetchConnectedRepos = async () => {
+  const fetchConnectedRepos = useCallback(async () => {
     try {
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/repos/connected`,
@@ -90,7 +76,20 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [session?.accessToken, session?.githubId]);
+  useEffect(() => {
+    if (session?.accessToken && session?.githubId) {
+      fetchConnectedRepos();
+    }
+  }, [session?.accessToken, session?.githubId, fetchConnectedRepos]);
+
+  useEffect(() => {
+    if (selectedRepo) {
+      fetchReviews(selectedRepo.id);
+      fetchDiary(selectedRepo.id);
+      fetchConnectedRepos();
+    }
+  }, [selectedRepo]);
 
   const fetchReviews = async (repoId: number) => {
     try {
