@@ -99,6 +99,7 @@ async def review_code(
                 file_path,
                 github_token
             )
+            print(f"FETCHING: {file_path} → length: {len(content)}")
             if content:
                 file_contents += f"\n\nFile: {file_path}\n{content[:2000]}"
 
