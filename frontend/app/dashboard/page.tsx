@@ -192,6 +192,7 @@ export default function DashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="border-slate-700 text-slate-300"
             >
+              
               Sign out
             </Button>
           </div>
