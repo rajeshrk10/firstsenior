@@ -48,9 +48,18 @@ async def get_file_content(
                 "Accept": "application/vnd.github.v3+json"
             }
         )
+        print(f"GITHUB API STATUS: {response.status_code}")
         if response.status_code == 200:
-            content = response.json().get("content", "")
-            return base64.b64decode(content).decode("utf-8")
+            data = response.json()
+            print(f"GITHUB API RESPONSE KEYS: {list(data.keys())}")
+            content = data.get("content", "")
+            print(f"CONTENT LENGTH BEFORE DECODE: {len(content)}")
+            if content:
+                decoded = base64.b64decode(content).decode("utf-8")
+                print(f"DECODED LENGTH: {len(decoded)}")
+                return decoded
+        else:
+            print(f"GITHUB API ERROR: {response.text}")
         return ""
 
 async def post_github_comment(
