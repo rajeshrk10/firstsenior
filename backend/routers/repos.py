@@ -42,6 +42,7 @@ async def connect_repo(
     github_repo_id: str,
     db: Session = Depends(get_db)
 ):
+    print(f"GITHUB TOKEN RECEIVED: {github_token[:20]}...")
     # Check if already connected
     existing = db.query(Repository).filter(
         Repository.github_repo_id == github_repo_id

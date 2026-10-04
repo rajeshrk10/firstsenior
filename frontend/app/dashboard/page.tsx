@@ -45,14 +45,22 @@ export default function DashboardPage() {
   const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [diary, setDiary] = useState<DiaryEntry[]>([]);
-  const [githubRepos, setGithubRepos] = useState<any[]>([]);
+  interface GithubRepo {
+  id: number
+  name: string
+  full_name: string
+  private: boolean
+  description: string
+  language: string
+}
+const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([])
   const [showRepoList, setShowRepoList] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState<number | null>(null);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
+    if (status === "unauthenticated") router.replace("/login");
   }, [status, router]);
 
   useEffect(() => {
@@ -192,7 +200,7 @@ export default function DashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="border-slate-700 text-slate-300"
             >
-              
+
               Sign out
             </Button>
           </div>
