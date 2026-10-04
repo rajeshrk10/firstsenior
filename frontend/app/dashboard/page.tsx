@@ -37,14 +37,6 @@ interface DiaryEntry {
   created_at: string;
 }
 
-export default function DashboardPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  const [connectedRepos, setConnectedRepos] = useState<ConnectedRepo[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [diary, setDiary] = useState<DiaryEntry[]>([]);
   interface GithubRepo {
   id: number
   name: string
@@ -53,7 +45,17 @@ export default function DashboardPage() {
   description: string
   language: string
 }
-const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([])
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const [connectedRepos, setConnectedRepos] = useState<ConnectedRepo[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [diary, setDiary] = useState<DiaryEntry[]>([]);
+
+  const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([]);
   const [showRepoList, setShowRepoList] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState<number | null>(null);
@@ -200,7 +202,6 @@ const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([])
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="border-slate-700 text-slate-300"
             >
-
               Sign out
             </Button>
           </div>
