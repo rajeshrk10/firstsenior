@@ -103,6 +103,7 @@ async def review_code(
             if content:
                 file_contents += f"\n\nFile: {file_path}\n{content[:2000]}"
 
+
         if not file_contents:
             print("No file contents fetched")
             return
