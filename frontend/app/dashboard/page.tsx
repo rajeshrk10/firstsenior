@@ -38,16 +38,6 @@ interface DiaryEntry {
 }
 
 export default function DashboardPage() {
-
-  //bad code to test if backend is working
-  const [test, setTest] = useState(null);
-  useEffect(() => {
-    fetch("http://localhost:8000/test")
-      .then((res) => res.json())
-      .then((data) => setTest(data));
-  });
-  console.log("test", test);
-  
   const { data: session, status } = useSession();
   const router = useRouter();
 
