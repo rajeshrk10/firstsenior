@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from core.database import engine
 from models.database import Base
-from routers import repos, webhooks, reviews, diary
+from routers import repos, webhooks, reviews, diary, auth
 
 load_dotenv()
 
@@ -23,6 +23,7 @@ app.include_router(repos.router)
 app.include_router(webhooks.router)
 app.include_router(reviews.router)
 app.include_router(diary.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():

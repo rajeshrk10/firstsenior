@@ -1,120 +1,133 @@
-"use client"
+"use client";
 
-import { useSession, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ReactMarkdown from "react-markdown"
-import axios from "axios"
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReactMarkdown from "react-markdown";
+import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface GithubRepo {
-  id: number
-  name: string
-  full_name: string
-  private: boolean
-  description: string
-  language: string
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  description: string;
+  language: string;
 }
 
 interface ConnectedRepo {
-  id: number
-  name: string
-  full_name: string
-  health_score: number
-  created_at: string
+  id: number;
+  name: string;
+  full_name: string;
+  health_score: number;
+  created_at: string;
 }
 
 interface Review {
-  id: number
-  repo_name?: string
-  commit_sha: string
-  files_changed: string
-  ai_review: string
-  health_score: number
-  created_at: string
+  id: number;
+  repo_name?: string;
+  commit_sha: string;
+  files_changed: string;
+  ai_review: string;
+  health_score: number;
+  created_at: string;
 }
 
 interface DiaryEntry {
-  id: number
-  commit_sha: string
-  summary: string
-  changes_made: string
-  senior_feedback: string
-  created_at: string
+  id: number;
+  commit_sha: string;
+  summary: string;
+  changes_made: string;
+  senior_feedback: string;
+  created_at: string;
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null)
-  const [showRepoList, setShowRepoList] = useState(false)
-  const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+  const [selectedRepo, setSelectedRepo] = useState<ConnectedRepo | null>(null);
+  const [showRepoList, setShowRepoList] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login")
+    if (session?.accessToken && session?.githubId) {
+      axios.post(`${API_URL}/auth/sync-token`, null, {
+        params: {
+          github_id: session.githubId,
+          github_token: session.accessToken,
+        },
+      });
     }
-  }, [status, router])
+  }, [session?.accessToken, session?.githubId]);
 
   // Fetch connected repos
-  const { data: connectedRepos = [], isLoading: reposLoading, error: reposError } = useQuery({
+  const {
+    data: connectedRepos = [],
+    isLoading: reposLoading,
+    error: reposError,
+  } = useQuery({
     queryKey: ["connectedRepos", session?.githubId],
     queryFn: async () => {
       const res = await axios.get(`${API_URL}/repos/connected`, {
-        params: { github_id: session?.githubId }
-      })
-      return res.data as ConnectedRepo[]
+        params: { github_id: session?.githubId },
+      });
+      return res.data as ConnectedRepo[];
     },
     enabled: !!session?.githubId,
-    refetchInterval: 30000
-  })
+    refetchInterval: 30000,
+  });
 
   // Set first repo as selected when repos load
   useEffect(() => {
     if (connectedRepos.length > 0 && !selectedRepo) {
-      setSelectedRepo(connectedRepos[0])
+      setSelectedRepo(connectedRepos[0]);
     }
-  }, [connectedRepos, selectedRepo])
+  }, [connectedRepos, selectedRepo]);
 
   // Fetch GitHub repos for picker
-  const { data: githubRepos = [], isLoading: githubLoading, refetch: fetchGithubRepos } = useQuery({
+  const {
+    data: githubRepos = [],
+    isLoading: githubLoading,
+    refetch: fetchGithubRepos,
+  } = useQuery({
     queryKey: ["githubRepos", session?.accessToken],
     queryFn: async () => {
       const res = await axios.get(`${API_URL}/repos/list`, {
-        params: { github_token: session?.accessToken }
-      })
-      return res.data as GithubRepo[]
+        params: { github_token: session?.accessToken },
+      });
+      return res.data as GithubRepo[];
     },
-    enabled: false
-  })
+    enabled: false,
+  });
 
   // Fetch reviews for selected repo
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ["reviews", selectedRepo?.id],
     queryFn: async () => {
-      const res = await axios.get(`${API_URL}/reviews/${selectedRepo?.id}`)
-      return res.data as Review[]
+      const res = await axios.get(`${API_URL}/reviews/${selectedRepo?.id}`);
+      return res.data as Review[];
     },
-    enabled: !!selectedRepo?.id
-  })
+    enabled: !!selectedRepo?.id,
+  });
 
   // Fetch diary for selected repo
   const { data: diary = [], isLoading: diaryLoading } = useQuery({
     queryKey: ["diary", selectedRepo?.id],
     queryFn: async () => {
-      const res = await axios.get(`${API_URL}/diary/${selectedRepo?.id}`)
-      return res.data as DiaryEntry[]
+      const res = await axios.get(`${API_URL}/diary/${selectedRepo?.id}`);
+      return res.data as DiaryEntry[];
     },
-    enabled: !!selectedRepo?.id
-  })
+    enabled: !!selectedRepo?.id,
+  });
 
   // Connect repo mutation
   const connectMutation = useMutation({
@@ -125,26 +138,26 @@ export default function DashboardPage() {
           github_id: session?.githubId,
           repo_full_name: repo.full_name,
           repo_name: repo.name,
-          github_repo_id: String(repo.id)
-        }
-      })
+          github_repo_id: String(repo.id),
+        },
+      });
     },
     onSuccess: () => {
-      setShowRepoList(false)
-      queryClient.invalidateQueries({ queryKey: ["connectedRepos"] })
+      setShowRepoList(false);
+      queryClient.invalidateQueries({ queryKey: ["connectedRepos"] });
     },
     onError: (err: any) => {
       if (err.response?.data?.detail === "Repository already connected") {
-        alert("Already connected")
+        alert("Already connected");
       }
-    }
-  })
+    },
+  });
 
   const getHealthColor = (score: number) => {
-    if (score >= 80) return "text-green-400"
-    if (score >= 60) return "text-yellow-400"
-    return "text-red-400"
-  }
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-yellow-400";
+    return "text-red-400";
+  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-IN", {
@@ -152,23 +165,23 @@ export default function DashboardPage() {
       month: "short",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
-    })
-  }
+      minute: "2-digit",
+    });
+  };
 
-  const currentRepo = connectedRepos.find(r => r.id === selectedRepo?.id) || selectedRepo
+  const currentRepo =
+    connectedRepos.find((r) => r.id === selectedRepo?.id) || selectedRepo;
 
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <p className="text-white">Loading...</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-950">
-
       {/* Header */}
       <div className="border-b border-slate-800 px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -179,7 +192,9 @@ export default function DashboardPage() {
               alt="avatar"
               className="w-8 h-8 rounded-full"
             />
-            <span className="text-slate-300 text-sm">{session?.user?.name}</span>
+            <span className="text-slate-300 text-sm">
+              {session?.user?.name}
+            </span>
             <Button
               variant="outline"
               size="sm"
@@ -194,7 +209,6 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto p-8">
         <div className="grid grid-cols-12 gap-6">
-
           {/* Left Sidebar */}
           <div className="col-span-3">
             <div className="flex items-center justify-between mb-4">
@@ -202,8 +216,8 @@ export default function DashboardPage() {
               <Button
                 size="sm"
                 onClick={() => {
-                  fetchGithubRepos()
-                  setShowRepoList(true)
+                  fetchGithubRepos();
+                  setShowRepoList(true);
                 }}
                 disabled={githubLoading}
                 className="bg-green-600 hover:bg-green-700 text-white text-xs"
@@ -220,8 +234,11 @@ export default function DashboardPage() {
 
             {reposLoading ? (
               <div className="space-y-2">
-                {[1, 2].map(i => (
-                  <div key={i} className="h-20 bg-slate-800 rounded-lg animate-pulse" />
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-20 bg-slate-800 rounded-lg animate-pulse"
+                  />
                 ))}
               </div>
             ) : (
@@ -236,8 +253,12 @@ export default function DashboardPage() {
                         : "border-slate-800 bg-slate-900 hover:border-slate-600"
                     }`}
                   >
-                    <p className="text-white font-medium text-sm">{repo.name}</p>
-                    <p className={`text-lg font-bold mt-1 ${getHealthColor(repo.health_score)}`}>
+                    <p className="text-white font-medium text-sm">
+                      {repo.name}
+                    </p>
+                    <p
+                      className={`text-lg font-bold mt-1 ${getHealthColor(repo.health_score)}`}
+                    >
                       {repo.health_score}/100
                     </p>
                     <p className="text-slate-500 text-xs">Health Score</p>
@@ -262,13 +283,19 @@ export default function DashboardPage() {
                     <h2 className="text-2xl font-bold text-white">
                       {currentRepo.name}
                     </h2>
-                    <p className="text-slate-400 text-sm">{currentRepo.full_name}</p>
+                    <p className="text-slate-400 text-sm">
+                      {currentRepo.full_name}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-4xl font-bold ${getHealthColor(currentRepo.health_score)}`}>
+                    <p
+                      className={`text-4xl font-bold ${getHealthColor(currentRepo.health_score)}`}
+                    >
                       {currentRepo.health_score}/100
                     </p>
-                    <p className="text-slate-500 text-sm">Current Health Score</p>
+                    <p className="text-slate-500 text-sm">
+                      Current Health Score
+                    </p>
                   </div>
                 </div>
 
@@ -286,8 +313,11 @@ export default function DashboardPage() {
                   <TabsContent value="reviews">
                     {reviewsLoading ? (
                       <div className="space-y-4">
-                        {[1, 2].map(i => (
-                          <div key={i} className="h-24 bg-slate-800 rounded-lg animate-pulse" />
+                        {[1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="h-24 bg-slate-800 rounded-lg animate-pulse"
+                          />
                         ))}
                       </div>
                     ) : reviews.length === 0 ? (
@@ -303,9 +333,13 @@ export default function DashboardPage() {
                           <Card
                             key={review.id}
                             className="bg-slate-900 border-slate-800 p-6 cursor-pointer hover:border-slate-600 transition-colors"
-                            onClick={() => setSelectedReview(
-                              selectedReview?.id === review.id ? null : review
-                            )}
+                            onClick={() =>
+                              setSelectedReview(
+                                selectedReview?.id === review.id
+                                  ? null
+                                  : review,
+                              )
+                            }
                           >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
@@ -319,7 +353,9 @@ export default function DashboardPage() {
                                   {formatDate(review.created_at)}
                                 </span>
                               </div>
-                              <span className={`font-bold ${getHealthColor(review.health_score)}`}>
+                              <span
+                                className={`font-bold ${getHealthColor(review.health_score)}`}
+                              >
                                 {review.health_score}/100
                               </span>
                             </div>
@@ -328,7 +364,9 @@ export default function DashboardPage() {
                             </p>
                             {selectedReview?.id === review.id && (
                               <div className="mt-4 pt-4 border-t border-slate-800 text-sm text-slate-300 leading-7 [&>h2]:text-white [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-4 [&>h3]:text-green-400 [&>h3]:font-semibold [&>h3]:mt-3 [&>ul]:ml-4 [&>ul]:list-disc [&>p]:my-2 [&>pre]:bg-slate-800 [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>code]:text-green-300 [&>strong]:text-yellow-400">
-                                <ReactMarkdown>{review.ai_review}</ReactMarkdown>
+                                <ReactMarkdown>
+                                  {review.ai_review}
+                                </ReactMarkdown>
                               </div>
                             )}
                           </Card>
@@ -341,8 +379,11 @@ export default function DashboardPage() {
                   <TabsContent value="diary">
                     {diaryLoading ? (
                       <div className="space-y-4">
-                        {[1, 2].map(i => (
-                          <div key={i} className="h-24 bg-slate-800 rounded-lg animate-pulse" />
+                        {[1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="h-24 bg-slate-800 rounded-lg animate-pulse"
+                          />
                         ))}
                       </div>
                     ) : diary.length === 0 ? (
@@ -393,7 +434,9 @@ export default function DashboardPage() {
               </>
             ) : (
               <Card className="bg-slate-900 border-slate-800 p-8 text-center">
-                <p className="text-slate-400">Select a repository to view reviews</p>
+                <p className="text-slate-400">
+                  Select a repository to view reviews
+                </p>
               </Card>
             )}
           </div>
@@ -424,18 +467,26 @@ export default function DashboardPage() {
                     <p className="text-white font-medium">{repo.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       {repo.language && (
-                        <Badge variant="outline" className="text-slate-400 border-slate-700 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="text-slate-400 border-slate-700 text-xs"
+                        >
                           {repo.language}
                         </Badge>
                       )}
                       {repo.private && (
-                        <Badge variant="outline" className="text-slate-400 border-slate-700 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="text-slate-400 border-slate-700 text-xs"
+                        >
                           Private
                         </Badge>
                       )}
                     </div>
                     {repo.description && (
-                      <p className="text-slate-500 text-xs mt-1">{repo.description}</p>
+                      <p className="text-slate-500 text-xs mt-1">
+                        {repo.description}
+                      </p>
                     )}
                   </div>
                   <Button
@@ -443,16 +494,14 @@ export default function DashboardPage() {
                     disabled={connectMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 text-white ml-4"
                   >
-                    
                     {connectMutation.isPending ? "Connecting..." : "Connect"}
                   </Button>
                 </div>
               ))}
             </div>
           </Card>
-
         </div>
       )}
     </div>
-  )
+  );
 }
