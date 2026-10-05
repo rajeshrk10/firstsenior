@@ -443,13 +443,14 @@ export default function DashboardPage() {
                     disabled={connectMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 text-white ml-4"
                   >
+                    
                     {connectMutation.isPending ? "Connecting..." : "Connect"}
                   </Button>
                 </div>
               ))}
             </div>
           </Card>
-          
+
         </div>
       )}
     </div>
