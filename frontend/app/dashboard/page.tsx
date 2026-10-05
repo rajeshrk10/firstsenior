@@ -60,12 +60,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (session?.accessToken && session?.githubId) {
-      axios.post(`${API_URL}/auth/sync-token`, null, {
-        params: {
+      axios
+        .post(`${API_URL}/auth/sync-token`, {
           github_id: session.githubId,
           github_token: session.accessToken,
-        },
-      });
+        })
+        .catch((error) => {
+          console.error("Failed to sync token:", error);
+        });
     }
   }, [session?.accessToken, session?.githubId]);
 
