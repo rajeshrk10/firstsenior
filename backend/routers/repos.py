@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.database import get_db
 from models.database import Repository, User
+from core.security import encrypt_token
 import httpx
 import os
 
@@ -63,7 +64,7 @@ async def connect_repo(
             github_id=str(profile["id"]),
             username=profile["login"],
             avatar_url=profile["avatar_url"],
-            access_token=github_token
+            access_token=encrypt_token(github_token)
         )
         db.add(user)
         db.commit()

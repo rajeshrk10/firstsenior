@@ -38,7 +38,8 @@ const handler = NextAuth({
           const githubProfile = profile as GithubProfile
       if (account?.access_token && githubProfile?.id) {
         try {
-          await fetch("http://localhost:8000/auth/sync-token", {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          await fetch(`${apiUrl}/auth/sync-token`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

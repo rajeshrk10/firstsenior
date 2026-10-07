@@ -1,10 +1,16 @@
 from groq import Groq
-from models.database import Review, Repository, DiaryEntry
+from models.database import Review, Repository
 from core.database import SessionLocal
-import httpx
 import os
-import base64
 import re
+from services.github import (
+    get_file_content,
+    post_github_commit_comment,
+    get_pr_changed_files,
+    post_github_pr_comment
+)
+from services.rag import get_past_mistakes_context
+from services.diary_writer import generate_and_save_diary_entry
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
@@ -35,58 +41,20 @@ def calculate_health_score(review_text: str) -> float:
     numbered_issues = len(re.findall(r'^\d+\.\s+', review_text, re.MULTILINE))
     return max(100.0 - (numbered_issues * 15), 20.0)
 
-async def get_file_content(
-    repo_full_name: str,
-    file_path: str,
-    github_token: str
-) -> str:
-    async with httpx.AsyncClient() as client_http:
-        response = await client_http.get(
-            f"https://api.github.com/repos/{repo_full_name}/contents/{file_path}",
-            headers={
-                "Authorization": f"Bearer {github_token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-        )
-        print(f"GITHUB API STATUS: {response.status_code}")
-        if response.status_code == 200:
-            data = response.json()
-            print(f"GITHUB API RESPONSE KEYS: {list(data.keys())}")
-            content = data.get("content", "")
-            print(f"CONTENT LENGTH BEFORE DECODE: {len(content)}")
-            if content:
-                decoded = base64.b64decode(content).decode("utf-8")
-                print(f"DECODED LENGTH: {len(decoded)}")
-                return decoded
-        else:
-            print(f"GITHUB API ERROR: {response.text}")
-        return ""
-
-async def post_github_comment(
-    repo_full_name: str,
-    commit_sha: str,
-    review: str,
-    github_token: str
-):
-    async with httpx.AsyncClient() as client_http:
-        await client_http.post(
-            f"https://api.github.com/repos/{repo_full_name}/commits/{commit_sha}/comments",
-            headers={
-                "Authorization": f"Bearer {github_token}",
-                "Accept": "application/vnd.github.v3+json"
-            },
-            json={"body": review}
-        )
-
 async def review_code(
     repo_id: int,
     repo_full_name: str,
     commit_sha: str,
     changed_files: list,
-    github_token: str
+    github_token: str,
+    pr_number: int = None
 ):
     db = SessionLocal()
     try:
+        # If PR event and no changed files provided, fetch directly from GitHub
+        if pr_number and not changed_files:
+            changed_files = await get_pr_changed_files(repo_full_name, pr_number, github_token)
+
         print(f"ALL CHANGED FILES: {changed_files}")
 
         relevant_extensions = [".js", ".jsx", ".ts", ".tsx", ".css"]
@@ -118,15 +86,18 @@ async def review_code(
             db.close()
             return
 
+        # Retrieve RAG context (past developer mistakes)
+        past_mistakes = get_past_mistakes_context(db, repo_id)
+        user_prompt = f"Please review these changed files:\n{file_contents}{past_mistakes}"
+
+        MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
         # First call — get full review
         response = client.chat.completions.create(
-            model="qwen/qwen3.8-27b",
+            model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Please review these changed files:\n{file_contents}"
-                }
+                {"role": "user", "content": user_prompt}
             ],
             max_tokens=900,
             temperature=0.3
@@ -135,35 +106,34 @@ async def review_code(
         ai_review = response.choices[0].message.content
         print(f"AI REVIEW SNIPPET: {ai_review[:200]}")
 
-        # Second call — AI scores based on severity
-        score_response = client.chat.completions.create(
-            model="qwen/qwen3.8-27b",
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Based on this code review:\n{ai_review}\n\n"
-                        "Calculate a health score from 0 to 100.\n"
-                        "Consider how severely each issue affects the app:\n"
-                        "- App crashes or security hole: deduct 25\n"
-                        "- Causes bugs or bad performance: deduct 15\n"
-                        "- Hard to maintain: deduct 8\n"
-                        "- Minor style issue: deduct 3\n"
-                        "Start from 100. Reply with ONLY a number. Example: 65"
-                    )
-                }
-            ],
-            max_tokens=10,
-            temperature=0.1
-        )
-
-        score_text = score_response.choices[0].message.content.strip()
-        print(f"AI SCORE RESPONSE: {score_text}")
-
+        # Try computing score from review text or call scoring completion
         try:
+            score_response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Based on this code review:\n{ai_review}\n\n"
+                            "Calculate a health score from 0 to 100.\n"
+                            "Consider how severely each issue affects the app:\n"
+                            "- App crashes or security hole: deduct 25\n"
+                            "- Causes bugs or bad performance: deduct 15\n"
+                            "- Hard to maintain: deduct 8\n"
+                            "- Minor style issue: deduct 3\n"
+                            "Start from 100. Reply with ONLY a number. Example: 65"
+                        )
+                    }
+                ],
+                max_tokens=10,
+                temperature=0.1
+            )
+            score_text = score_response.choices[0].message.content.strip()
+            print(f"AI SCORE RESPONSE: {score_text}")
             health_score = float(''.join(filter(str.isdigit, score_text)))
             health_score = max(min(health_score, 100), 20)
-        except:
+        except Exception as score_err:
+            print(f"Scoring fallback triggered: {score_err}")
             health_score = calculate_health_score(ai_review)
 
         print(f"HEALTH SCORE: {health_score}")
@@ -172,6 +142,7 @@ async def review_code(
         review = Review(
             repo_id=repo_id,
             commit_sha=commit_sha,
+            pr_number=pr_number,
             files_changed=", ".join(relevant_files),
             ai_review=ai_review,
             health_score=health_score
@@ -186,25 +157,35 @@ async def review_code(
             repo.health_score = health_score
             db.add(repo)
 
-        # Write diary entry
-        diary = DiaryEntry(
+        # Save changes to database first
+        db.commit()
+
+        # Generate and save diary entry using diary_writer service
+        generate_and_save_diary_entry(
+            db=db,
             repo_id=repo_id,
             commit_sha=commit_sha,
-            summary=f"Reviewed {len(relevant_files)} files",
-            changes_made=", ".join(relevant_files),
-            senior_feedback=ai_review[:500]
+            changed_files=relevant_files,
+            ai_review=ai_review
         )
-        db.add(diary)
-        db.commit()
 
         print("DATABASE UPDATED SUCCESSFULLY")
 
-        await post_github_comment(
-            repo_full_name,
-            commit_sha,
-            ai_review,
-            github_token
-        )
+        # Post GitHub comment (PR comment or Commit comment)
+        if pr_number:
+            await post_github_pr_comment(
+                repo_full_name,
+                pr_number,
+                ai_review,
+                github_token
+            )
+        else:
+            await post_github_commit_comment(
+                repo_full_name,
+                commit_sha,
+                ai_review,
+                github_token
+            )
 
     except Exception as e:
         print(f"AI review error: {e}")
