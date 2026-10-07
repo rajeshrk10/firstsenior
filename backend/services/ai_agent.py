@@ -93,26 +93,46 @@ async def review_code(
         past_mistakes = get_past_mistakes_context(db, repo_id)
         user_prompt = f"Please review these changed files:\n{file_contents}{past_mistakes}"
 
-        MODEL_NAME = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+        candidate_models = [
+            os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+            "llama-3.1-8b-instant",
+            "qwen-2.5-coder-32b",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it"
+        ]
+        # Filter duplicates keeping order
+        models_to_try = list(dict.fromkeys(candidate_models))
 
-        # First call — get full review
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=900,
-            temperature=0.3
-        )
+        ai_review = None
+        used_model = None
 
-        ai_review = response.choices[0].message.content
+        for model in models_to_try:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    max_tokens=900,
+                    temperature=0.3
+                )
+                ai_review = response.choices[0].message.content
+                used_model = model
+                print(f"GROQ MODEL {model} SUCCEEDED!")
+                break
+            except Exception as model_err:
+                print(f"Model {model} failed: {model_err}. Trying next fallback...")
+
+        if not ai_review:
+            raise Exception("All Groq models failed to generate review.")
+
         print(f"AI REVIEW SNIPPET: {ai_review[:200]}")
 
         # Try computing score from review text or call scoring completion
         try:
             score_response = client.chat.completions.create(
-                model=MODEL_NAME,
+                model=used_model,
                 messages=[
                     {
                         "role": "user",
