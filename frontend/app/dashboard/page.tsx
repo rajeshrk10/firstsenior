@@ -58,18 +58,7 @@ export default function DashboardPage() {
   const [showRepoList, setShowRepoList] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
-  useEffect(() => {
-    if (session?.accessToken && session?.githubId) {
-      axios
-        .post(`${API_URL}/auth/sync-token`, {
-          github_id: session.githubId,
-          github_token: session.accessToken,
-        })
-        .catch((error) => {
-          console.error("Failed to sync token:", error);
-        });
-    }
-  }, [session?.accessToken, session?.githubId]);
+
 
   // Fetch connected repos
   const {
