@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactMarkdown from "react-markdown";
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface GithubRepo {
   id: number;
@@ -108,6 +108,7 @@ export default function DashboardPage() {
       return res.data as Review[];
     },
     enabled: !!selectedRepo?.id,
+    refetchInterval: 5000,
   });
 
   // Fetch diary for selected repo
@@ -118,6 +119,7 @@ export default function DashboardPage() {
       return res.data as DiaryEntry[];
     },
     enabled: !!selectedRepo?.id,
+    refetchInterval: 5000,
   });
 
   // Connect repo mutation
