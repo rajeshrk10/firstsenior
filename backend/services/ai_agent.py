@@ -57,7 +57,10 @@ async def review_code(
 
         print(f"ALL CHANGED FILES: {changed_files}")
 
-        relevant_extensions = [".js", ".jsx", ".ts", ".tsx", ".css"]
+        relevant_extensions = [
+            ".js", ".jsx", ".ts", ".tsx", ".css", ".py", ".html",
+            ".json", ".sql", ".yaml", ".yml", ".go", ".java", ".rs", ".c", ".cpp"
+        ]
         relevant_files = [
             f for f in changed_files
             if any(f.endswith(ext) for ext in relevant_extensions)
