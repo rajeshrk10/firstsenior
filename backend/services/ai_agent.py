@@ -93,20 +93,27 @@ async def review_code(
         past_mistakes = get_past_mistakes_context(db, repo_id)
         user_prompt = f"Please review these changed files:\n{file_contents}{past_mistakes}"
 
-        candidate_models = [
-            os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
-            "llama-3.1-8b-instant",
-            "qwen-2.5-coder-32b",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it"
-        ]
-        # Filter duplicates keeping order
-        models_to_try = list(dict.fromkeys(candidate_models))
+        # Fetch active Groq models directly from live API
+        live_models = []
+        try:
+            models_data = client.models.list().data
+            live_models = [m.id for m in models_data if "whisper" not in m.id.lower() and "embed" not in m.id.lower()]
+            print(f"LIVE GROQ MODELS AVAILABLE: {live_models}")
+        except Exception as err:
+            print(f"Could not list Groq models: {err}")
+
+        preferred = os.getenv("GROQ_MODEL")
+        if preferred and preferred in live_models:
+            live_models.remove(preferred)
+            live_models.insert(0, preferred)
+
+        if not live_models:
+            raise Exception("No active Groq models available for your API key.")
 
         ai_review = None
         used_model = None
 
-        for model in models_to_try:
+        for model in live_models:
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -122,7 +129,7 @@ async def review_code(
                 print(f"GROQ MODEL {model} SUCCEEDED!")
                 break
             except Exception as model_err:
-                print(f"Model {model} failed: {model_err}. Trying next fallback...")
+                print(f"Model {model} failed: {model_err}. Trying next available model...")
 
         if not ai_review:
             raise Exception("All Groq models failed to generate review.")
