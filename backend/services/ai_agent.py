@@ -93,12 +93,16 @@ async def review_code(
         past_mistakes = get_past_mistakes_context(db, repo_id)
         user_prompt = f"Please review these changed files:\n{file_contents}{past_mistakes}"
 
-        # Fetch active Groq models directly from live API
+        # Fetch active Groq models directly from live API (filter out guardrails and audio models)
         live_models = []
         try:
             models_data = client.models.list().data
-            live_models = [m.id for m in models_data if "whisper" not in m.id.lower() and "embed" not in m.id.lower()]
-            print(f"LIVE GROQ MODELS AVAILABLE: {live_models}")
+            skip_keywords = ["whisper", "embed", "guard", "safeguard", "orpheus"]
+            live_models = [
+                m.id for m in models_data 
+                if not any(kw in m.id.lower() for kw in skip_keywords)
+            ]
+            print(f"FILTERED CHAT MODELS AVAILABLE: {live_models}")
         except Exception as err:
             print(f"Could not list Groq models: {err}")
 
@@ -108,7 +112,7 @@ async def review_code(
             live_models.insert(0, preferred)
 
         if not live_models:
-            raise Exception("No active Groq models available for your API key.")
+            raise Exception("No active chat/code Groq models available for your API key.")
 
         ai_review = None
         used_model = None
@@ -124,10 +128,14 @@ async def review_code(
                     max_tokens=900,
                     temperature=0.3
                 )
-                ai_review = response.choices[0].message.content
-                used_model = model
-                print(f"GROQ MODEL {model} SUCCEEDED!")
-                break
+                content = response.choices[0].message.content
+                if content and content.strip():
+                    ai_review = content
+                    used_model = model
+                    print(f"GROQ MODEL {model} GENERATED {len(content)} CHARS OF REVIEW!")
+                    break
+                else:
+                    print(f"Model {model} returned empty text. Trying next model...")
             except Exception as model_err:
                 print(f"Model {model} failed: {model_err}. Trying next available model...")
 
