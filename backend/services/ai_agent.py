@@ -90,7 +90,7 @@ async def review_code(
         past_mistakes = get_past_mistakes_context(db, repo_id)
         user_prompt = f"Please review these changed files:\n{file_contents}{past_mistakes}"
 
-        MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        MODEL_NAME = os.getenv("GROQ_MODEL", "llama3-70b-8192")
 
         # First call — get full review
         response = client.chat.completions.create(
