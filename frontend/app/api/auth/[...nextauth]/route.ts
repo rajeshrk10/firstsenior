@@ -34,26 +34,26 @@ const handler = NextAuth({
       session.githubId = (token.githubId ?? "") as string;
       return session;
     },
-    // async signIn({ account, profile }) {
-    //   const githubProfile = profile as GithubProfile;
-    //   if (account?.access_token && githubProfile?.id) {
-    //     try {
-    //       const apiUrl =
-    //         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    //       await fetch(`${apiUrl}/auth/sync-token`, {
-    //         method: "POST",
-    //         headers: { "Content-Type": "application/json" },
-    //         body: JSON.stringify({
-    //           github_id: githubProfile.id.toString(),
-    //           github_token: account.access_token,
-    //         }),
-    //       });
-    //     } catch (err) {
-    //       console.error("Token sync failed:", err);
-    //     }
-    //   }
-    //   return true;
-    // },
+    async signIn({ account, profile }) {
+      const githubProfile = profile as GithubProfile;
+      if (account?.access_token && githubProfile?.id) {
+        try {
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          await fetch(`${apiUrl}/auth/sync-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              github_id: githubProfile.id.toString(),
+              github_token: account.access_token,
+            }),
+          });
+        } catch (err) {
+          console.error("Token sync failed:", err);
+        }
+      }
+      return true;
+    },
   },
 
   pages: {
