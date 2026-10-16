@@ -45,7 +45,7 @@ const handler = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               github_id: githubProfile.id.toString(),
-              github_token: account.access_token,
+              github_token: account.access_token, 
             }),
           });
           console.log("Token sync response:", response.status); 
