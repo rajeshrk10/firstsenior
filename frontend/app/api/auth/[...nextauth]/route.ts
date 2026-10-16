@@ -43,7 +43,7 @@ const handler = NextAuth({
     },
     async signIn({ account, profile }) {
       const githubProfile = profile as GithubProfile;
-      if (account?.access_token && githubProfile?.id) {
+      if (account?.access_token && githubProfile?.id) { 
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
