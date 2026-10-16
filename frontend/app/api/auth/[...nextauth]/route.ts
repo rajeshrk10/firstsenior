@@ -8,11 +8,18 @@ interface GithubProfile extends Profile {
   avatar_url: string;
 }
 
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
+}
 const handler = NextAuth({
   providers: [
     GithubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+      clientId: requiredEnv("GITHUB_CLIENT_ID"),
+      clientSecret: requiredEnv("GITHUB_CLIENT_SECRET"),
       authorization: {
         params: {
           scope: "read:user user:email repo admin:repo_hook",
