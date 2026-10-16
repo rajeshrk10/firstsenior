@@ -34,13 +34,13 @@ const handler = NextAuth({
       session.githubId = (token.githubId ?? "") as string;
       return session;
     },
-    async signIn({ account, profile }) {
-      const githubProfile = profile as GithubProfile;
-      if (account?.access_token && githubProfile?.id) {
-        try {
+   async signIn({ account, profile }) {
+      try {
+        const githubProfile = profile as GithubProfile;
+        if (account?.access_token && githubProfile?.id) {
           const apiUrl =
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-          await fetch(`${apiUrl}/auth/sync-token`, {
+          const response = await fetch(`${apiUrl}/auth/sync-token`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -48,11 +48,13 @@ const handler = NextAuth({
               github_token: account.access_token,
             }),
           });
-        } catch (err) {
-          console.error("Token sync failed:", err);
+          console.log("Token sync response:", response.status);
         }
+        return true;
+      } catch (err) {
+        console.error("Token sync failed:", err);
+        return true; // Still return true even if sync fails
       }
-      return true;
     },
   },
 
