@@ -48,7 +48,7 @@ const handler = NextAuth({
               github_token: account.access_token,
             }),
           });
-          console.log("Token sync response:", response.status);
+          console.log("Token sync response:", response.status); 
         }
         return true;
       } catch (err) {
