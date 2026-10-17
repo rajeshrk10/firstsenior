@@ -46,7 +46,7 @@ const handler = NextAuth({
       const githubProfile = profile as GithubProfile;
       if (!account?.access_token || !githubProfile?.id) return false;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const apiUrl = process.env.API_URL;
         const response = await fetch(`${apiUrl}/auth/sync-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
