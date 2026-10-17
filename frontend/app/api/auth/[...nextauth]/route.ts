@@ -37,8 +37,8 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = (token.accessToken ?? "") as string;
-      session.githubId = (token.githubId ?? "") as string;
+      session.accessToken =token.accessToken;
+      session.githubId = token.githubId;
       return session;
     },
     async signIn({ account, profile }) {
@@ -62,7 +62,7 @@ const handler = NextAuth({
         return true;
       } catch (err) {
         console.error("Token sync failed:", err);
-        return false;
+        return true; // Allow sign-in even if token sync fails
       }
     },
   },
