@@ -68,7 +68,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["connectedRepos", session?.githubId],
     queryFn: async () => {
-      const res = await axios.get(`${API_URL}/repos/connected`, {
+      const res = await axios.get<ConnectedRepo[]>(`${API_URL}/repos/connected`, {
         params: { github_id: session?.githubId },
       });
       return res.data as ConnectedRepo[];
