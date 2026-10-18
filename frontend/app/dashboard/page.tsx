@@ -10,8 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactMarkdown from "react-markdown";
 import axios from "axios";
+import { API_URL_CONFIG } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+const API_URL = API_URL_CONFIG || "http://localhost:8000";
 
 interface GithubRepo {
   id: number;
