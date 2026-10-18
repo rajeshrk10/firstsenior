@@ -13,7 +13,7 @@ import axios from "axios";
 import { API_URL_CONFIG } from "@/lib/config";
 
 
-const API_URL = API_URL_CONFIG || "http://localhost:8000";
+const API_URL = API_URL_CONFIG ;
 
 interface GithubRepo {
   id: number;
