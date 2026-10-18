@@ -58,7 +58,12 @@ export default function DashboardPage() {
   const [showRepoList, setShowRepoList] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
-
+  // Redirect to login if unauthenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
 
   // Fetch connected repos
   const {
@@ -68,9 +73,12 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["connectedRepos", session?.githubId],
     queryFn: async () => {
-      const res = await axios.get<ConnectedRepo[]>(`${API_URL}/repos/connected`, {
-        params: { github_id: session?.githubId },
-      });
+      const res = await axios.get<ConnectedRepo[]>(
+        `${API_URL}/repos/connected`,
+        {
+          params: { github_id: session?.githubId },
+        },
+      );
       return res.data as ConnectedRepo[];
     },
     enabled: !!session?.githubId,
@@ -196,7 +204,7 @@ export default function DashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="border-slate-700 text-slate-950 bg-slate-300 hover:bg-slate-400 hover:text-slate-950 hover:cursor-pointer text-xs"
             >
-               Sign out
+              Sign out
             </Button>
           </div>
         </div>

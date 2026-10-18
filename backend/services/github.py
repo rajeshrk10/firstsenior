@@ -25,6 +25,29 @@ async def get_file_content(repo_full_name: str, file_path: str, github_token: st
                 return base64.b64decode(content).decode("utf-8")
         return ""
 
+async def get_file_patch(
+    repo_full_name: str,
+    commit_sha: str,
+    github_token: str
+) -> dict:
+    async with httpx.AsyncClient() as client_http:
+        response = await client_http.get(
+            f"https://api.github.com/repos/{repo_full_name}/commits/{commit_sha}",
+            headers={
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+        )
+        if response.status_code == 200:
+            data = response.json()
+            patches = {}
+            for file in data.get("files", []):
+                filename = file.get("filename", "")
+                patch = file.get("patch", "")
+                if patch:
+                    patches[filename] = patch
+            return patches
+        return {}
 async def get_commit_patch_diff(repo_full_name: str, commit_sha: str, github_token: str) -> list:
     """Fetch exact commit diff (lines added/removed) instead of whole files."""
     async with httpx.AsyncClient() as client:

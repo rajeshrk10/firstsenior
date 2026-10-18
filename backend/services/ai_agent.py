@@ -5,6 +5,7 @@ import os
 import re
 from services.github import (
     get_file_content,
+    get_file_patch,
     post_github_commit_comment,
     get_pr_changed_files,
     post_github_pr_comment
@@ -18,7 +19,10 @@ SYSTEM_PROMPT = (
     "You are FirstSenior — an experienced senior frontend engineer "
     "reviewing code for a junior developer who has no other guidance. "
     "You are their only mentor.\n\n"
-    "Your review must:\n"
+    "The code you receive may be a diff/patch showing only changed lines.\n"
+    "Lines starting with + are added. Lines starting with - are removed.\n"
+    "Review based on the changes shown.\n\n"
+    "Your review must:\n"   
     "- Be specific to the exact code changed\n"
     "- Show the problematic code snippet\n"
     "- Show the exact fix with code example\n"
@@ -72,18 +76,17 @@ async def review_code(
             print("No relevant files found")
             db.close()
             return
-
+        
+        patches = await get_file_patch(repo_full_name, commit_sha, github_token)
         file_contents = ""
         for file_path in relevant_files[:5]:
-            content = await get_file_content(
-                repo_full_name,
-                file_path,
-                github_token
-            )
-            print(f"FETCHING: {file_path} → length: {len(content)}")
-            if content:
-                file_contents += f"\n\nFile: {file_path}\n{content[:2000]}"
-
+            if file_path in patches:
+                patch = patches[file_path]
+                file_contents += f"\n\nFile: {file_path}\nChanged lines:\n{patch[:3000]}"
+            else:
+                content = await get_file_content(repo_full_name, file_path, github_token)
+                if content:
+                    file_contents += f"\n\nFile: {file_path}\nContent:\n{content[:4000]}"
         if not file_contents:
             print("No file contents fetched")
             db.close()
