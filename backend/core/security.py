@@ -1,31 +1,32 @@
 import os #used for accessing few functions of the operating system like environment variables.
 import base64 #used for encoding and decoding data in base64 format
-#used for symmetric encryption and decryption of data
-from cryptography.fernet import Fernet 
-#used like sha256 to use hashing algorithms for key derivation and secure password storage.
-from cryptography.hazmat.primitives import hashes
-# used to derive a secure key from a secret password.
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-# Reuse the same Fernet instance instead of deriving the key for every call.
-_fernet_instance: Fernet | None = None
+
+try:
+    #used for symmetric encryption and decryption of data
+    from cryptography.fernet import Fernet 
+
+    #used like sha256 to use hashing algorithms for key derivation and secure password storage.
+    from cryptography.hazmat.primitives import hashes
+
+    # used to derive a secure key from a secret password.
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    HAS_CRYPTOGRAPHY = True #if the required imports are successful,library is available.
+except ImportError:
+    HAS_CRYPTOGRAPHY = False # if the required imports fail,library is not available.
 
 
 #function used to get the "fernet key" for encryption and decryption.
 def _get_fernet_key() -> bytes:# telling the function to return a bytes object.
-    global _fernet_instance
-    if _fernet_instance is not None:
-        return _fernet_instance
-    # Use the existing environment variable. No deployment configuration change.
-    secret_key = os.getenv("ENCRYPTION_KEY")
-    if not secret_key:
-        raise RuntimeError("ENCRYPTION_KEY is not configured")
+    if not HAS_CRYPTOGRAPHY:
+        return b"" #returning an empty byte.
+    secret_key = os.getenv("ENCRYPTION_KEY", "firstsenior_default_secret_key_change_in_prod")
+    salt = b'firstsenior_salt_2026' #saving a salt value as bytes for key derivation. Salt is used to add randomness to the key derivation process, making it more secure.
 
-    # Keep these values unchanged to preserve compatibility with existing
-    # tokens encrypted by the previous implementation.
+
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),#using SHA256 hashing algorithm for key derivation.
         length=32, #derived key should be 32 bytes long.
-        salt=b"firstsenior_salt_2026",
+        salt=salt,
         iterations=100_000,#using for underscore readability.
     )
     #first encoding the secret key to bytes, then deriving a secure key using the KDF, and finally encoding the derived key in a URL-safe base64 format.
