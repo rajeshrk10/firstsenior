@@ -1,12 +1,17 @@
+# "APIRouter" for grouping all the endpoints,"Depends" is used to inject dependencies into the route functions. "HTTPException" is used to raise HTTP errors with specific status codes and messages.
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from core.database import get_db
-from models.database import Repository, User
-from core.security import encrypt_token
-import httpx
-import os
+from sqlalchemy.orm import Session #Session is used to manage database sessions.
+from core.database import get_db # get_db is a function that provides a database session for each request.
+from models.database import Repository, User #importing the Repository and User models from the database module to interact with the corresponding tables in the database.
+from core.security import encrypt_token # importing the encrypt_token function.
+import httpx #importing httpx library to make asynchronous HTTP requests to external APIs.
+import os #importing the os module to access environment variables and other operating system functionalities.
 
+#assiging the prefix "/repos" for this router
 router = APIRouter(prefix="/repos", tags=["repos"])
+
+# we added the "/repos" in prefix so that we dont want to add before in each endpoint
+
 
 @router.get("/list")
 async def list_github_repos(github_token: str, db: Session = Depends(get_db)):

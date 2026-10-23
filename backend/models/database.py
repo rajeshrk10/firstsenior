@@ -1,10 +1,18 @@
+#importing necessary modules from SQLAlchemy and other libraries.
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
+
+#importing relationship function from SQLAlchemy to define relationships between tables
 from sqlalchemy.orm import relationship
+
+#importing datetime module to work with date and time
 from datetime import datetime
+
+#importing Base class from core.database module, which is the declarative base for SQLAlchemy models
 from core.database import Base
 
 #in this file, we create the tables for the database using SQLAlchemy ORM. Each class represents a table in the database, and each attribute of the class represents a column in the table. The relationships between tables are also defined here.
 
+#by inheriting from Base, the User class becomes a SQLAlchemy model that can be used to interact with the users table in the database.
 class User(Base):
     __tablename__ = "users"
 
@@ -15,6 +23,7 @@ class User(Base):
     access_token = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    #relationship is used to define the relationship between the User and Repository models. The back_populates argument specifies the attribute on the related model that will be used to access the relationship from the other side. In this case, it allows us to access a user's repositories using user.repositories and a repository's user using repository.user.
     repositories = relationship("Repository", back_populates="user")
 
 
