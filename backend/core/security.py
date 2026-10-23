@@ -1,131 +1,91 @@
-
-import os
-import base64
-
-# Fernet provides authenticated encryption:
-# it encrypts the token and detects tampering with encrypted data.
-from cryptography.fernet import Fernet, InvalidToken
-
-# These imports are used to derive a valid Fernet key from
-# the existing ENCRYPTION_KEY environment variable.
+import os #used for accessing few functions of the operating system like environment variables.
+import base64 #used for encoding and decoding data in base64 format
+#used for symmetric encryption and decryption of data
+from cryptography.fernet import Fernet 
+#used like sha256 to use hashing algorithms for key derivation and secure password storage.
 from cryptography.hazmat.primitives import hashes
+# used to derive a secure key from a secret password.
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-
-# Initially, no Fernet object exists.
-# We create it the first time encryption or decryption is needed,
-# then reuse it instead of deriving the key on every call.
+# Reuse the same Fernet instance instead of deriving the key for every call.
 _fernet_instance: Fernet | None = None
 
 
-def _get_fernet() -> Fernet:
-    """
-    Return the Fernet encryption object.
-
-    The underscore in _get_fernet indicates this is an internal
-    helper function intended for use inside this module.
-    """
+#function used to get the "fernet key" for encryption and decryption.
+def _get_fernet_key() -> bytes:# telling the function to return a bytes object.
     global _fernet_instance
-
-    # If the Fernet object was already created, reuse it.
     if _fernet_instance is not None:
         return _fernet_instance
-
-    # Read the existing secret from the environment.
-    # Do not use a hardcoded fallback because that could
-    # accidentally encrypt tokens with a publicly known secret.
+    # Use the existing environment variable. No deployment configuration change.
     secret_key = os.getenv("ENCRYPTION_KEY")
-
     if not secret_key:
         raise RuntimeError("ENCRYPTION_KEY is not configured")
 
-    # PBKDF2 converts the secret into a key suitable for Fernet.
-    # Keep these settings unchanged to maintain compatibility
-    # with tokens encrypted using the previous implementation.
+    # Keep these values unchanged to preserve compatibility with existing
+    # tokens encrypted by the previous implementation.
     kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,  # Required key length before Fernet encoding
+        algorithm=hashes.SHA256(),#using SHA256 hashing algorithm for key derivation.
+        length=32, #derived key should be 32 bytes long.
         salt=b"firstsenior_salt_2026",
-        iterations=100_000,
+        iterations=100_000,#using for underscore readability.
     )
+    #first encoding the secret key to bytes, then deriving a secure key using the KDF, and finally encoding the derived key in a URL-safe base64 format.
+    return base64.urlsafe_b64encode(kdf.derive(secret_key.encode()))
 
-    # Derive the encryption key from the configured secret.
-    # Fernet expects the resulting key in URL-safe Base64 format.
-    derived_key = base64.urlsafe_b64encode(
-        kdf.derive(secret_key.encode("utf-8"))
-    )
-
-    # Create the Fernet object and cache it for future calls.
-    _fernet_instance = Fernet(derived_key)
-
-    return _fernet_instance
-
-
-def encrypt_token(plain_token: str) -> str:
-    """
-    Encrypt a plain GitHub token.
-
-    Example:
-        Input:  ghp_example_token
-        Output: enc:<encrypted-data>
-    """
-    # Reject empty tokens instead of storing meaningless values.
+#function used to encrypt github access token.
+def encrypt_token(plain_token: str) -> str: #telling the function to take a string as input and return a string as output.
+    """Encrypt a plain text GitHub access token."""
     if not plain_token:
-        raise ValueError("Token must not be empty")
+        return ""
+    if HAS_CRYPTOGRAPHY:
+        try:
+            fernet = Fernet(_get_fernet_key()) #creating a "Fernet object" using the derived key for encryption.
 
-    # Encrypt the token's UTF-8 bytes.
-    encrypted = _get_fernet().encrypt(
-        plain_token.encode("utf-8")
-    )
+            #first encoding the plain token to bytes, then encrypting it using the Fernet object, and finally decoding the encrypted token back to a string.
+            # adding enc prefix to indicate that the token is Fernet encrypted.
+            return "enc:" + fernet.encrypt(plain_token.encode()).decode()
 
-    # Preserve the existing 'enc:' prefix so the rest of the
-    # application can continue recognizing encrypted tokens.
-    return "enc:" + encrypted.decode("ascii")
+        #exception possiblities
+            # Invalid encryption key: If the derived key is not valid for Fernet encryption, an exception will be raised.
+            # Encryption failure: If there is an issue during the encryption process an exception will be raised.
+            # Encoding/decoding errors: if the input is other than string might throw this error
+            # Environment variable issues: If the ENCRYPTION_KEY environment variable is not set or is invalid, it may lead to an exception during key derivation
+        except Exception as e:
+            print(f"Encryption error: {e}")
+            return plain_token
+    else:
+        # Simple base64 fallback if cryptography library is not installed
+        return "b64:" + base64.b64encode(plain_token.encode()).decode()
 
+#function used to decrypt github access token.
+def decrypt_token(encrypted_token: str) -> str: #telling the function to take a string as input and return a string as output.
+    """Decrypt an encrypted GitHub access token."""
 
-def decrypt_token(encrypted_token: str) -> str:
-    """
-    Decrypt a token previously produced by encrypt_token().
-    """
-    # An empty stored token is not a valid encrypted token.
+    #if the encrypted token is empty or None, return an empty string.
     if not encrypted_token:
-        raise ValueError("Stored token must not be empty")
+        return ""
 
-    # Our existing database format uses the 'enc:' prefix.
-    prefix = "enc:"
+    #if the encrypted value starts with "enc:" and the cryptography library is available.
+    if encrypted_token.startswith("enc:") and HAS_CRYPTOGRAPHY:
+        try:
+            fernet = Fernet(_get_fernet_key()) #creating a "Fernet object" using the derived key for decryption.
+            raw = encrypted_token[4:] #removing the "enc:" prefix from the encrypted token to get the actual encrypted data.
 
-    # Refuse unknown formats rather than treating unencrypted
-    # data as a valid credential.
-    if not encrypted_token.startswith(prefix):
-        raise ValueError(
-            "Unsupported token format; the stored token may need migration"
-        )
+            #first encoding the raw value to bytes, then decrypting it using the Fernet object, and finally decoding the decrypted token back to a string.
+            return fernet.decrypt(raw.encode()).decode()
+       #exception possiblities
+            # Invalid encryption key: If the derived key is not valid for Fernet decryption, an exception will be raised.
+            # Decryption failure: If the encrypted token is tampered with or corrupted, an exception will be raised during decryption.
+        except Exception:
+            return encrypted_token
+    #if the encrypted value starts with "b64:" and the cryptography library is not available.
+    elif encrypted_token.startswith("b64:"):
+        try:
+            raw = encrypted_token[4:] #removing the "b64:" prefix from the encrypted token to get the actual base64 encoded data.
 
-    # Remove 'enc:' before passing the encrypted content to Fernet.
-    raw_token = encrypted_token[len(prefix):]
-
-    try:
-        # Decrypt the data and convert the resulting bytes to text.
-        decrypted = _get_fernet().decrypt(
-            raw_token.encode("ascii")
-        )
-        return decrypted.decode("utf-8")
-
-    except InvalidToken:
-        # This can happen if the data was changed or the key
-        # does not match the key used when it was encrypted.
-        raise RuntimeError(
-            "Token decryption failed; check the encryption key and stored data"
-        ) from None
-
-    except UnicodeEncodeError:
-        # The stored encrypted text was not valid ASCII.
-        raise RuntimeError(
-            "Stored token has an invalid format"
-        ) from None
-
-    except UnicodeDecodeError:
-        # Decryption produced bytes that are not valid UTF-8 text.
-        raise RuntimeError(
-            "Decrypted token is not valid UTF-8"
-        ) from None
+            #first encoding the raw value to bytes, then    secdecoding it from base64, and finally decoding the result back to a string.
+            return base64.b64decode(raw.encode()).decode()
+        except Exception:
+            return encrypted_token
+    else:
+        # Fallback if token was saved unencrypted
+        return encrypted_token
