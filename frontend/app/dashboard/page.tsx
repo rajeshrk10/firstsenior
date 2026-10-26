@@ -12,8 +12,7 @@ import ReactMarkdown from "react-markdown";
 import axios from "axios";
 import { API_URL_CONFIG } from "@/lib/config";
 
-
-const API_URL = API_URL_CONFIG ;
+const API_URL = API_URL_CONFIG;
 
 interface GithubRepo {
   id: number;
@@ -103,7 +102,7 @@ export default function DashboardPage() {
     queryKey: ["githubRepos", session?.accessToken],
     queryFn: async () => {
       const res = await axios.get(`${API_URL}/repos/list`, {
-        params: { github_token: session?.accessToken },
+        headers: { Authorization: `Bearer ${session?.accessToken}` },
       });
       return res.data as GithubRepo[];
     },
@@ -135,15 +134,18 @@ export default function DashboardPage() {
   // Connect repo mutation
   const connectMutation = useMutation({
     mutationFn: async (repo: GithubRepo) => {
-      await axios.post(`${API_URL}/repos/connect`, null, {
-        params: {
-          github_token: session?.accessToken,
+      await axios.post(
+        `${API_URL}/repos/connect`,
+        {
           github_id: session?.githubId,
           repo_full_name: repo.full_name,
           repo_name: repo.name,
           github_repo_id: String(repo.id),
         },
-      });
+        {
+          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        },
+      );
     },
     onSuccess: () => {
       setShowRepoList(false);
